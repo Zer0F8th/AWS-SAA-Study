@@ -1,0 +1,174 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import {
+  domainMeta,
+  estimateReadingTime,
+  formatDate,
+  lectureHref,
+  publishedLectures,
+} from '../../lib/lectures';
+import { withBase } from '../../lib/urls';
+
+export async function getStaticPaths() {
+  const lectures = publishedLectures(await getCollection('lectures'));
+  return lectures.map((entry) => ({ params: { id: entry.id }, props: { entry, lectures } }));
+}
+
+interface Props {
+  entry: CollectionEntry<'lectures'>;
+  lectures: CollectionEntry<'lectures'>[];
+}
+
+const { entry, lectures } = Astro.props;
+const { Content, headings } = await render(entry);
+const domain = domainMeta[entry.data.domain];
+const index = lectures.findIndex((lecture) => lecture.id === entry.id);
+const previous = index > 0 ? lectures[index - 1] : undefined;
+const next = index < lectures.length - 1 ? lectures[index + 1] : undefined;
+const minutes = estimateReadingTime(entry.body);
+const tocHeadings = headings.filter((heading) => heading.depth === 2 || heading.depth === 3);
+---
+
+<BaseLayout title={entry.data.title} description={entry.data.description} type="article">
+  <div class="reading-progress" id="reading-progress" aria-hidden="true"></div>
+  <Header />
+  <main id="main-content">
+    <header class="article-header">
+      <div class="article-header-inner">
+        <div class="article-breadcrumb">
+          <a href={withBase('/lectures/')}>← All lectures</a>
+          <span class="article-domain">Domain {domain.number} / Lecture {String(entry.data.order).padStart(2, '0')}</span>
+        </div>
+        <h1>{entry.data.title}</h1>
+        <p class="article-dek">{entry.data.description}</p>
+        <div class="article-meta">
+          <span>{formatDate(entry.data.publishedAt)}</span>
+          <span>{minutes} min read</span>
+          <span>{entry.data.difficulty}</span>
+          <div class="article-tags">
+            {entry.data.tags.map((tag) => <span>{tag}</span>)}
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="article-layout">
+      <article class="article-body" data-article-body>
+        {entry.data.objectives.length > 0 && (
+          <aside class="learning-objectives">
+            <p>After this lecture, you should be able to:</p>
+            <ul>
+              {entry.data.objectives.map((objective) => <li>{objective}</li>)}
+            </ul>
+          </aside>
+        )}
+        <Content />
+
+        <button class="completion-button mobile-completion" type="button" data-completion data-lecture-id={entry.id}>Mark as complete</button>
+
+        <nav class="article-nav" aria-label="Lecture navigation">
+          {previous ? (
+            <a href={lectureHref(previous)} rel="prev">
+              <small>← Previous lecture</small>
+              <strong>{previous.data.title}</strong>
+            </a>
+          ) : <span class="nav-placeholder" aria-hidden="true"></span>}
+          {next ? (
+            <a href={lectureHref(next)} rel="next">
+              <small>Next lecture →</small>
+              <strong>{next.data.title}</strong>
+            </a>
+          ) : <span class="nav-placeholder" aria-hidden="true"></span>}
+        </nav>
+      </article>
+
+      <aside class="article-aside">
+        <nav class="toc" aria-label="On this page">
+          <p class="toc-label">On this page</p>
+          <ol>
+            {tocHeadings.map((heading) => (
+              <li class={`depth-${heading.depth}`}>
+                <a href={`#${heading.slug}`}>{heading.text}</a>
+              </li>
+            ))}
+          </ol>
+          <button class="completion-button" type="button" data-completion data-lecture-id={entry.id}>Mark as complete</button>
+        </nav>
+      </aside>
+    </div>
+  </main>
+  <Footer />
+
+  <script is:inline>
+    const progress = document.querySelector('#reading-progress');
+    const article = document.querySelector('[data-article-body]');
+    const completionButtons = [...document.querySelectorAll('[data-completion]')];
+    const lectureId = completionButtons[0]?.dataset.lectureId;
+
+    const updateProgress = () => {
+      if (!article || !progress) return;
+      const start = article.offsetTop;
+      const distance = Math.max(1, article.offsetHeight - window.innerHeight);
+      const amount = Math.min(1, Math.max(0, (window.scrollY - start) / distance));
+      progress.style.width = `${amount * 100}%`;
+    };
+    updateProgress();
+    addEventListener('scroll', updateProgress, { passive: true });
+
+    if (completionButtons.length && lectureId) {
+      let completed = [];
+      try { completed = JSON.parse(localStorage.getItem('saa-completed') || '[]'); } catch {}
+      const renderCompletion = () => {
+        const isComplete = completed.includes(lectureId);
+        completionButtons.forEach((completion) => {
+          completion.classList.toggle('is-complete', isComplete);
+          completion.textContent = isComplete ? '✓ Lecture complete' : 'Mark as complete';
+          completion.setAttribute('aria-pressed', String(isComplete));
+        });
+      };
+      renderCompletion();
+      completionButtons.forEach((completion) => {
+        completion.addEventListener('click', () => {
+          completed = completed.includes(lectureId)
+            ? completed.filter((id) => id !== lectureId)
+            : [...completed, lectureId];
+          localStorage.setItem('saa-completed', JSON.stringify(completed));
+          renderCompletion();
+        });
+      });
+    }
+
+    document.querySelectorAll('[data-article-body] pre').forEach((pre) => {
+      const code = pre.querySelector('code');
+      if (!code) return;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'copy-code';
+      button.textContent = 'COPY';
+      button.addEventListener('click', async () => {
+        await navigator.clipboard.writeText(code.textContent || '');
+        button.textContent = 'COPIED';
+        setTimeout(() => { button.textContent = 'COPY'; }, 1600);
+      });
+      pre.append(button);
+    });
+
+    const tocLinks = [...document.querySelectorAll('.toc a[href^="#"]')];
+    if ('IntersectionObserver' in window && tocLinks.length) {
+      const headingObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          tocLinks.forEach((link) => link.classList.toggle('is-current', link.hash === `#${entry.target.id}`));
+        });
+      }, { rootMargin: '-15% 0px -75% 0px' });
+      tocLinks.forEach((link) => {
+        const target = document.querySelector(link.hash);
+        if (target) headingObserver.observe(target);
+      });
+    }
+  </script>
+</BaseLayout>

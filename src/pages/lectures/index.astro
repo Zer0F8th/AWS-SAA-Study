@@ -1,0 +1,94 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import LectureCard from '../../components/LectureCard.astro';
+import { publishedLectures } from '../../lib/lectures';
+
+const lectures = publishedLectures(await getCollection('lectures'));
+---
+
+<BaseLayout title="Lecture library" description="Browse practical Markdown lecture notes for every AWS SAA-C03 exam domain.">
+  <Header />
+  <main id="main-content" class="listing-page">
+    <header class="listing-header">
+      <div class="container">
+        <p class="page-kicker">SAA-C03 / Lecture index</p>
+        <h1>Find the signal.<br />Skip the noise.</h1>
+        <p class="lede">Search the notes by service, pattern, or exam domain. Every lecture is written as a decision guide—not a catalog of features.</p>
+      </div>
+    </header>
+
+    <div class="library-tools" aria-label="Lecture filters">
+      <div class="container library-tools-inner">
+        <label class="search-box">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
+          <span class="sr-only">Search lectures</span>
+          <input id="lecture-search" type="search" placeholder="Search IAM, VPC, failover…" autocomplete="off" />
+        </label>
+        <div class="filter-group" role="group" aria-label="Filter by exam domain">
+          <button class="filter-button is-active" type="button" data-filter="all" aria-pressed="true">All</button>
+          <button class="filter-button" type="button" data-filter="secure" aria-pressed="false">Secure</button>
+          <button class="filter-button" type="button" data-filter="resilient" aria-pressed="false">Resilient</button>
+          <button class="filter-button" type="button" data-filter="performance" aria-pressed="false">Performance</button>
+          <button class="filter-button" type="button" data-filter="cost" aria-pressed="false">Cost</button>
+        </div>
+      </div>
+    </div>
+
+    <section class="container" aria-labelledby="result-count">
+      <div class="library-summary">
+        <span id="result-count" aria-live="polite">{lectures.length} lectures</span>
+        <span>Ordered by curriculum</span>
+      </div>
+      <div class="lecture-list" id="lecture-results">
+        {lectures.map((lecture) => <LectureCard lecture={lecture} />)}
+      </div>
+      <p class="empty-state" id="empty-state" hidden>No lectures match that search. Try a service name or a broader domain.</p>
+    </section>
+  </main>
+  <Footer />
+
+  <script is:inline>
+    const input = document.querySelector('#lecture-search');
+    const cards = [...document.querySelectorAll('[data-lecture-card]')];
+    const buttons = [...document.querySelectorAll('[data-filter]')];
+    const count = document.querySelector('#result-count');
+    const empty = document.querySelector('#empty-state');
+    let activeDomain = 'all';
+
+    try {
+      const completed = JSON.parse(localStorage.getItem('saa-completed') || '[]');
+      cards.forEach((card) => {
+        if (completed.includes(card.dataset.id)) card.classList.add('is-complete');
+      });
+    } catch {}
+
+    const applyFilters = () => {
+      const query = input.value.trim().toLowerCase();
+      let visible = 0;
+      cards.forEach((card) => {
+        const matchesText = !query || card.dataset.search.includes(query);
+        const matchesDomain = activeDomain === 'all' || card.dataset.domain === activeDomain;
+        card.hidden = !(matchesText && matchesDomain);
+        if (!card.hidden) visible += 1;
+      });
+      count.textContent = `${visible} ${visible === 1 ? 'lecture' : 'lectures'}`;
+      empty.hidden = visible !== 0;
+    };
+
+    input.addEventListener('input', applyFilters);
+    buttons.forEach((button) => {
+      button.addEventListener('click', () => {
+        activeDomain = button.dataset.filter;
+        buttons.forEach((candidate) => {
+          const isActive = candidate === button;
+          candidate.classList.toggle('is-active', isActive);
+          candidate.setAttribute('aria-pressed', String(isActive));
+        });
+        applyFilters();
+      });
+    });
+  </script>
+</BaseLayout>

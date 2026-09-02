@@ -1,0 +1,25 @@
+---
+interface Props {
+  floating?: boolean;
+}
+
+import { withBase } from '../lib/urls';
+
+const { floating = false } = Astro.props;
+const pathname = Astro.url.pathname;
+---
+
+<header class:list={['site-header', { 'site-header--floating': floating }]}> 
+  <div class="wide-container header-inner">
+    <a class="wordmark" href={withBase('/')} aria-label="AWS SAA Field Notes home">
+      <span class="wordmark-bracket" aria-hidden="true">[</span>
+      <span>SAA</span><span class="wordmark-muted">//FIELD NOTES</span>
+      <span class="wordmark-bracket" aria-hidden="true">]</span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <a class:list={{ active: pathname.includes('/lectures') }} href={withBase('/lectures/')}>Lectures</a>
+      <a href={withBase('/#domains')}>Exam map</a>
+      <a class="rss-link" href={withBase('/rss.xml')} aria-label="RSS feed">RSS</a>
+    </nav>
+  </div>
+</header>

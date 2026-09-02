@@ -1,0 +1,17 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Header from '../components/Header.astro';
+import { withBase } from '../lib/urls';
+---
+
+<BaseLayout title="Page not found" description="That AWS SAA field note could not be found.">
+  <Header />
+  <main id="main-content" class="not-found">
+    <div>
+      <span class="not-found-code">ERROR / 404</span>
+      <h1>Route not found.</h1>
+      <p>Even Route 53 cannot resolve this one.</p>
+      <a class="text-link" href={withBase('/')}>Return to the field notes →</a>
+    </div>
+  </main>
+</BaseLayout>

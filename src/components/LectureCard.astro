@@ -1,0 +1,44 @@
+---
+import type { Lecture } from '../lib/lectures';
+import { domainMeta, estimateReadingTime, lectureHref } from '../lib/lectures';
+
+interface Props {
+  lecture: Lecture;
+}
+
+const { lecture } = Astro.props;
+const domain = domainMeta[lecture.data.domain];
+const number = String(lecture.data.order).padStart(2, '0');
+const searchText = [
+  lecture.data.title,
+  lecture.data.description,
+  domain.label,
+  ...lecture.data.tags,
+].join(' ').toLowerCase();
+---
+
+<article
+  class="lecture-card"
+  data-lecture-card
+  data-domain={lecture.data.domain}
+  data-search={searchText}
+  data-id={lecture.id}
+>
+  <a href={lectureHref(lecture)} aria-label={`Lecture ${number}: ${lecture.data.title}`}>
+    <div class="lecture-number">{number}</div>
+    <div class="lecture-card-copy">
+      <div class="lecture-eyebrow">
+        <span>{domain.shortLabel}</span>
+        <span aria-hidden="true">·</span>
+        <span>{estimateReadingTime(lecture.body)} min</span>
+        <span class="complete-label" aria-hidden="true">complete</span>
+      </div>
+      <h3>{lecture.data.title}</h3>
+      <p>{lecture.data.description}</p>
+      <div class="lecture-tags" aria-label="Topics">
+        {lecture.data.tags.slice(0, 3).map((tag) => <span>{tag}</span>)}
+      </div>
+    </div>
+    <span class="card-arrow" aria-hidden="true">↗</span>
+  </a>
+</article>

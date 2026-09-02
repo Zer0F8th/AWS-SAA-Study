@@ -1,0 +1,38 @@
+---
+const logs = [
+  { time: '00:00:01', level: 'BOOT', tone: 'info', message: 'loading SAA-C03 exam blueprint', meta: 'domains=4 mode=study' },
+  { time: '00:00:02', level: 'IAM', tone: 'secure', message: 'evaluating identity policy', meta: 'effect=allow resource=least-privilege' },
+  { time: '00:00:03', level: 'VPC', tone: 'info', message: 'route resolved', meta: 'target=nat-gateway subnet=private-a' },
+  { time: '00:00:04', level: 'ELB', tone: 'success', message: 'target health check passed', meta: 'az=us-east-1b status=healthy' },
+  { time: '00:00:05', level: 'RDS', tone: 'warn', message: 'failover initiated', meta: 'from=primary to=standby rto=68s' },
+  { time: '00:00:06', level: 'S3', tone: 'success', message: 'lifecycle transition complete', meta: 'class=GLACIER_IR objects=1847' },
+  { time: '00:00:07', level: 'SQS', tone: 'info', message: 'message received', meta: 'visibility_timeout=30 retries=0' },
+  { time: '00:00:08', level: 'LAMBDA', tone: 'secure', message: 'function scaled', meta: 'concurrency=240 duration_ms=84' },
+  { time: '00:00:09', level: 'ROUTE53', tone: 'warn', message: 'health check changed', meta: 'routing=failover state=secondary' },
+  { time: '00:00:10', level: 'COST', tone: 'success', message: 'architecture right-sized', meta: 'savings=31% availability=99.99%' },
+  { time: '00:00:11', level: 'EXAM', tone: 'error', message: 'distractor detected', meta: 'reason=operational-overhead' },
+  { time: '00:00:12', level: 'PASS', tone: 'success', message: 'trade-off selected', meta: 'secure resilient performant cost-aware' },
+];
+---
+
+<div class="terminal-bleed" aria-label="Animated AWS architecture event stream">
+  <div class="terminal-shell">
+    <div class="terminal-bar">
+      <div class="terminal-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+      <span class="terminal-title">architecture-review.log</span>
+      <span class="terminal-status"><i></i> live</span>
+    </div>
+    <div class="terminal-viewport">
+      <div class="terminal-stream">
+        {[...logs, ...logs].map((log) => (
+          <div class="terminal-line">
+            <span class="terminal-time">{log.time}</span>
+            <span class:list={['terminal-level', `is-${log.tone}`]}>{log.level}</span>
+            <span class="terminal-message">{log.message}</span>
+            <span class="terminal-meta">{log.meta}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+</div>
